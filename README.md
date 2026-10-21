@@ -41,11 +41,23 @@ filter hurt more than it helped (whipsaw). Momentum-only is a reasonable
 
 Latest rebalance 2026-09-30 → hold equal-weight **XLF, XLK, XLV**.
 
-## Next step: paper trading
+## Paper trading (live forward test)
 
-To forward-test without real money, run the monthly signal against an Alpaca
-paper account (`alpaca-py`, paper trading is free). Not wired up yet — that's
-the natural next commit.
+`paper_trader.py` runs the strategy against a virtual **$100,000** account at
+real market closes — no broker, no real money. It recomputes the latest
+month-end signal from fresh data, rebalances only when the target changes,
+charges the same 5 bps cost as the backtest, and logs every trade.
+
+- `paper_state.json` — current cash/positions/target
+- `paper_log.csv` — append-only trade + equity-mark audit trail
+
+**Status:** initialized 2026-10-21 on the 2026-09-30 signal —
+XLF / XLK / XLV equal thirds at $56.04 / $188.54 / $178.94.
+Equity after costs: $99,975. Next scheduled rebalance: 2026-10-30 (month-end).
+
+Run it any time with `venv/bin/python paper_trader.py`. A broker-grade
+alternative is an Alpaca paper account; this runner exists so the test
+needs no signup and stays fully auditable in git.
 
 ## Reproducibility
 

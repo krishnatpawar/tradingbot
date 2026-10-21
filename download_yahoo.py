@@ -16,7 +16,7 @@ TICKERS = ["SPY", "XLF", "XLK", "XLE", "XLV", "XLI",
            "XLP", "XLU", "XLY", "XLB", "XLRE", "XLC"]
 
 START = dt.datetime(2010, 1, 1, tzinfo=dt.timezone.utc)
-END = dt.datetime(2026, 10, 16, tzinfo=dt.timezone.utc)  # exclusive
+END = dt.datetime.now(dt.timezone.utc) + dt.timedelta(days=1)  # through latest close
 UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
 
 
