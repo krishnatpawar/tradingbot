@@ -16,8 +16,8 @@ backtested on 2010-01 → 2026-10 total-return data with transaction costs.
 
 | Strategy | CAGR | Avg/mo | Months ≥5% | Sharpe | Max DD |
 |---|---|---|---|---|---|
-| momentum-only | 12.2% | 1.04% | 12.9% | 0.92 | −31.4% |
-| momentum + 200DMA filter | 7.5% | 0.66% | 7.9% | 0.67 | −38.7% |
+| momentum-only | 12.2% | 1.04% | 12.9% | 0.93 | −31.4% |
+| momentum + 200DMA filter | 7.1% | 0.63% | 7.9% | 0.65 | −38.4% |
 | SPY buy-and-hold (benchmark) | 14.1% | 1.19% | 15.8% | 0.99 | −33.7% |
 
 2020+ sub-period (out-of-sample consistency check): momentum-only CAGR 12.9%,
@@ -27,6 +27,40 @@ Sharpe 0.80 — no collapse, but still trails SPY.
 ~80%/year — a return no audited public track record sustains). The regime
 filter hurt more than it helped (whipsaw). Momentum-only is a reasonable
 ~12%/yr strategy with equity-like risk, not a 5%/month machine.
+
+## Daily signals test
+
+Same rule, signal evaluated at every close (`daily_signals.py`):
+
+| Frequency | CAGR | Sharpe | Max DD | Turnover/yr |
+|---|---|---|---|---|
+| monthly | 12.2% | 0.93 | −31.4% | 2.9× |
+| daily rebalance | 11.9% | 0.91 | −30.8% | 18.9× |
+| daily check, trade on change | 11.9% | 0.91 | −30.8% | 18.9× |
+
+Daily checking does **not** help: the #3/#4 rank boundary flickers, causing
+~6.5× the turnover and slightly worse returns. (In this weight-based model the
+two daily variants coincide — weights don't drift between trades; in the
+share-based paper account they'd differ marginally.) **Monthly stays.**
+
+## Correctness testing
+
+`test_strategy.py` — 11 pytest tests, all passing. Highlights:
+
+- **No-lookahead proof:** truncating all future data leaves every past
+  monthly and daily weight bit-identical.
+- **Signal-day test:** a synthetic +100% jump that *causes* a switch is not
+  earned by the strategy — only the switch cost is booked that day.
+- This audit caught a real 1-day leak in the first backtest version
+  (holdings earned their signal day's return). Fixed by lagging holdings
+  one day; impact was small (CAGR 12.24% → 12.23%) but the engine is now
+  provably leak-free.
+- Paper trader hardening: fetch retries, stale/corrupt-data rejection
+  (tested), atomic state writes, and an abort if an all-cash target ever
+  appears with the regime filter off (that would mean broken data, not a
+  signal).
+
+Run: `venv/bin/python -m pytest test_strategy.py -q`
 
 ## Files
 

@@ -16,7 +16,9 @@ committed to git so the paper test has an auditable trail.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
+import time
 from datetime import datetime, timezone
 
 import pandas as pd
@@ -30,16 +32,57 @@ LOG_FILE = "paper_log.csv"
 UA = download_yahoo.UA
 
 
+def fetch_with_retry(ticker: str, tries: int = 3) -> pd.Series:
+    """download_yahoo.fetch with retries — a flaky network must never
+    silently produce a half-empty panel."""
+    last_exc: Exception | None = None
+    for i in range(tries):
+        try:
+            return download_yahoo.fetch(ticker)
+        except Exception as exc:  # noqa: BLE001 — retried, then re-raised
+            last_exc = exc
+            time.sleep(2 * (i + 1))
+    raise RuntimeError(f"data fetch failed for {ticker} after {tries} tries") from last_exc
+
+
+def validate_panel(prices: pd.DataFrame) -> None:
+    """Fail loudly on stale or corrupt data instead of trading on it."""
+    if prices.empty:
+        raise RuntimeError("price panel is empty")
+    last_date = prices.index[-1].date()
+    age = (datetime.now(timezone.utc).date() - last_date).days
+    if age > 7:
+        raise RuntimeError(f"stale data: last bar {last_date} is {age} days old")
+    tail = prices.iloc[-5:]
+    if tail["SPY"].isna().any() or (tail["SPY"] <= 0).any():
+        raise RuntimeError("corrupt SPY data in latest bars")
+    held_cols = [c for c in prices.columns if tail[c].notna().sum() == 0]
+    if held_cols:
+        raise RuntimeError(f"no recent data for: {held_cols}")
+
+
 def latest_closes(tickers: list[str]) -> dict[str, float]:
     """Most recent raw (unadjusted) close per ticker — execution prices."""
     out: dict[str, float] = {}
     for t in tickers:
         url = (f"https://query1.finance.yahoo.com/v8/finance/chart/{t}"
                "?interval=1d&range=5d")
-        raw = subprocess.run(["curl", "-sS", "--max-time", "30", "-A", UA, url],
-                             capture_output=True, text=True, check=True).stdout
-        closes = json.loads(raw)["chart"]["result"][0]["indicators"]["quote"][0]["close"]
-        out[t] = float([c for c in closes if c is not None][-1])
+        last_exc: Exception | None = None
+        for i in range(3):
+            try:
+                raw = subprocess.run(["curl", "-sS", "--max-time", "30", "-A", UA, url],
+                                     capture_output=True, text=True, check=True).stdout
+                closes = json.loads(raw)["chart"]["result"][0]["indicators"]["quote"][0]["close"]
+                px = float([c for c in closes if c is not None][-1])
+                if px <= 0:
+                    raise ValueError(f"non-positive price for {t}: {px}")
+                out[t] = px
+                break
+            except Exception as exc:  # noqa: BLE001 — retried, then re-raised
+                last_exc = exc
+                time.sleep(2 * (i + 1))
+        else:
+            raise RuntimeError(f"latest close fetch failed for {t}") from last_exc
     return out
 
 
@@ -53,8 +96,11 @@ def load_state() -> dict:
 
 
 def save_state(state: dict) -> None:
-    with open(STATE_FILE, "w") as f:
+    """Atomic write: a crash mid-save must not corrupt the account state."""
+    tmp = STATE_FILE + ".tmp"
+    with open(tmp, "w") as f:
         json.dump(state, f, indent=2)
+    os.replace(tmp, STATE_FILE)
 
 
 def log(rows: list[dict]) -> None:
@@ -73,12 +119,17 @@ def main() -> None:
     fresh = state["inception"] is None
 
     # Fresh data -> latest month-end target weights from the strategy itself
-    frames = {t: download_yahoo.fetch(t) for t in download_yahoo.TICKERS}
+    frames = {t: fetch_with_retry(t) for t in download_yahoo.TICKERS}
     prices = pd.DataFrame(frames)
     prices.index = prices.index.normalize()
+    validate_panel(prices)
     w = build_weights(prices, use_regime_filter=False)
     target = {t: float(v) for t, v in w.iloc[-1].items() if v > 0}
     as_of = str(w.index[-1].date())
+    if set(target) == {"CASH"}:
+        # With the regime filter off, an all-cash target means broken data,
+        # not a signal. Refuse to liquidate the paper account on it.
+        raise RuntimeError("all-cash target with regime filter off — data problem, aborting")
 
     px = latest_closes(SECTORS + ["SPY"])
     equity = state["cash"] + sum(

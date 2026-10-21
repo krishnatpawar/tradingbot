@@ -60,6 +60,10 @@ def backtest(prices: pd.DataFrame, use_regime_filter: bool = True) -> dict:
 
     # Holdings apply from the rebalance date's close to next rebalance.
     holdings = w.reindex(prices.index, method="ffill").fillna(0.0)
+    # No-lookahead: weights decided at close t first earn the return of t+1.
+    # (Without this shift, the new portfolio would earn the very day whose
+    # close produced the signal — a 1-day leak that flatters results.)
+    holdings = holdings.shift(1).fillna(0.0)
     # Turnover at each rebalance date (sum of |weight changes| / 2 = one-way turnover)
     trade_dates = w.index
     prev = w.shift(1).fillna(0.0)
@@ -87,6 +91,45 @@ def backtest(prices: pd.DataFrame, use_regime_filter: bool = True) -> dict:
         "monthly": monthly,
         "monthly_bench": monthly_b,
         "turnover": one_way_turnover,
+    }
+
+
+def daily_targets(prices: pd.DataFrame, on_change_only: bool = False) -> pd.DataFrame:
+    """Top-N momentum target weights computed at EVERY close.
+
+    on_change_only=False: target is re-struck daily (rebalance daily).
+    on_change_only=True: target only moves when the top-N membership changes.
+    """
+    mom = prices[SECTORS].pct_change(MOM_LOOKBACK)
+    mask = mom.rank(axis=1, ascending=False) <= TOP_N
+    counts = mask.sum(axis=1)
+    tw = mask.div(counts.where(counts > 0), axis=0).fillna(0.0)
+    tw["CASH"] = (counts == 0).astype(float)
+    if on_change_only:
+        sets = mask.apply(lambda r: tuple(sorted(r.index[r])), axis=1)
+        changed = sets != sets.shift(1)
+        changed.iloc[0] = True
+        tw = tw.where(changed).ffill().fillna(0.0)
+    return tw
+
+
+def backtest_daily(prices: pd.DataFrame, on_change_only: bool = False) -> dict:
+    """Daily-signal backtest, same cost model and no-lookahead lag as monthly."""
+    rets = prices.pct_change()
+    tw = daily_targets(prices, on_change_only)
+    holdings = tw.shift(1).fillna(0.0)  # signal at close t earns from t+1
+    one_way = (tw - tw.shift(1).fillna(0.0)).abs().sum(axis=1) / 2.0
+    cost = one_way * (COST_BPS / 1e4)
+    strat_rets = holdings[SECTORS].mul(rets[SECTORS].fillna(0.0)).sum(axis=1) - cost
+    bench_rets = rets["SPY"].copy()
+    return {
+        "weights": tw,
+        "daily_returns": strat_rets,
+        "equity": (1 + strat_rets).cumprod(),
+        "bench_equity": (1 + bench_rets).cumprod(),
+        "monthly": strat_rets.resample("ME").apply(lambda x: (1 + x).prod() - 1),
+        "monthly_bench": bench_rets.resample("ME").apply(lambda x: (1 + x).prod() - 1),
+        "turnover": one_way,
     }
 
 
