@@ -10,8 +10,8 @@
     "pct_months_ge_5pct": 0.083,
     "best_month": 0.0526,
     "worst_month": -0.0604,
-    "year1_return": -0.0064,
-    "year2_return": -0.0183
+    "first_half_return": -0.0064,
+    "second_half_return": -0.0183
   },
   "monthly + regime filter": {
     "label": "monthly + regime filter",
@@ -24,8 +24,8 @@
     "pct_months_ge_5pct": 0.083,
     "best_month": 0.0526,
     "worst_month": -0.0604,
-    "year1_return": -0.0149,
-    "year2_return": -0.0196
+    "first_half_return": -0.0149,
+    "second_half_return": -0.0196
   },
   "daily signals": {
     "label": "daily signals",
@@ -38,8 +38,8 @@
     "pct_months_ge_5pct": 0.083,
     "best_month": 0.0619,
     "worst_month": -0.0478,
-    "year1_return": 0.0023,
-    "year2_return": 0.1585
+    "first_half_return": 0.0023,
+    "second_half_return": 0.1585
   },
   "SPY buy-and-hold": {
     "label": "SPY buy-and-hold",
@@ -52,7 +52,7 @@
     "pct_months_ge_5pct": 0.208,
     "best_month": 0.1051,
     "worst_month": -0.0557,
-    "year1_return": 0.1623,
-    "year2_return": 0.1641
+    "first_half_return": 0.1623,
+    "second_half_return": 0.1641
   }
 }

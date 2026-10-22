@@ -1,0 +1,58 @@
+{
+  "monthly momentum-only": {
+    "label": "monthly momentum-only",
+    "total_return": 2.1784,
+    "CAGR": 0.1226,
+    "ending_value_on_100k": 317838.37,
+    "sharpe_annual": 0.85,
+    "max_drawdown": -0.3138,
+    "pct_months_positive": 0.633,
+    "pct_months_ge_5pct": 0.15,
+    "best_month": 0.1168,
+    "worst_month": -0.0953,
+    "first_half_return": 1.1445,
+    "second_half_return": 0.4821
+  },
+  "monthly + regime filter": {
+    "label": "monthly + regime filter",
+    "total_return": 0.8606,
+    "CAGR": 0.0641,
+    "ending_value_on_100k": 186060.56,
+    "sharpe_annual": 0.56,
+    "max_drawdown": -0.3844,
+    "pct_months_positive": 0.492,
+    "pct_months_ge_5pct": 0.1,
+    "best_month": 0.1131,
+    "worst_month": -0.0787,
+    "first_half_return": 0.5059,
+    "second_half_return": 0.2355
+  },
+  "daily signals": {
+    "label": "daily signals",
+    "total_return": 2.3804,
+    "CAGR": 0.1295,
+    "ending_value_on_100k": 338035.27,
+    "sharpe_annual": 0.9,
+    "max_drawdown": -0.3075,
+    "pct_months_positive": 0.583,
+    "pct_months_ge_5pct": 0.158,
+    "best_month": 0.1444,
+    "worst_month": -0.1,
+    "first_half_return": 0.9615,
+    "second_half_return": 0.7233
+  },
+  "SPY buy-and-hold": {
+    "label": "SPY buy-and-hold",
+    "total_return": 3.2326,
+    "CAGR": 0.1552,
+    "ending_value_on_100k": 423257.27,
+    "sharpe_annual": 1.03,
+    "max_drawdown": -0.3372,
+    "pct_months_positive": 0.708,
+    "pct_months_ge_5pct": 0.183,
+    "best_month": 0.127,
+    "worst_month": -0.1249,
+    "first_half_return": 1.3166,
+    "second_half_return": 0.827
+  }
+}
